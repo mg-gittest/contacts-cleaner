@@ -2,10 +2,9 @@ package consulting.germain;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by mark_local on 12/11/2015.
@@ -13,83 +12,90 @@ import java.io.IOException;
  */
 public final class ContactCleaner {
 
+
     public static void main(final String[] args) {
         final ContactCleaner app = new ContactCleaner();
         app.buildAndDisplayGui();
     }
 
-    private JFrame frame;
+    private JFrame frame = new JFrame("Contact Cleaner");
+    private JPanel panel = new JPanel();
+    private StringBuffer buffer = new StringBuffer();
+    private TextArea textArea = new TextArea();
 
-    private ShowFileDialog showFileDialog;
-    private JPanel panel;
-    private JButton fileButton;
-    private TextArea textArea;
+    private JButton btnInputFile = new JButton("Input");
+    private JButton  btnOutputFile = new JButton("Output");
+    private JButton btnStart = new JButton("Start");
+
+    private ShowFileDialog inShowFD;
+    private ShowFileDialog outShowFD;
+    private StartAction startAction;
+    private ExecutorService executor =  Executors.newFixedThreadPool(1);
+
+    public void startCleaning() {
+        Cleaner cleaner = new Cleaner(this);
+        executor.execute(cleaner);
+
+        buffer.append("\nExecutor started");
+    }
+
+    public JFrame getFrame() {
+        return frame;
+    }
+
+    public StringBuffer getBuffer() {
+        return buffer;
+    }
+
+    public File getInFile() {
+        if (inShowFD == null) { return null; }
+        return inShowFD.getFile();
+    }
+
+    public File getOutFile() {
+        if (outShowFD == null) { return null; }
+        return outShowFD.getFile();
+    }
+
+    public void updateText() {
+        textArea.setText(buffer.toString());
+    }
 
     private void buildAndDisplayGui() {
         buildContent();
 
-        frame.setMinimumSize(new Dimension(1200, 600));
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setLocation(200, 200);
         frame.setVisible(true);
     }
 
     private void buildContent() {
-        frame = new JFrame("Contact Cleaner");
 
-        panel = new JPanel();
-
-        textArea = new TextArea();
         panel.add(textArea);
 
-        panel.add(new JLabel("Select Input File:"));
+        panel.add(new JLabel("Select Files:"));
 
-        fileButton = new JButton("Input");
-        showFileDialog = new ShowFileDialog(frame, textArea);
-        fileButton.addActionListener(showFileDialog);
-        panel.add(fileButton);
+        inShowFD = new ShowFileDialog(this);
+        btnInputFile.addActionListener(inShowFD);
+        panel.add(btnInputFile);
+
+        outShowFD = new ShowFileDialog(this);
+        btnOutputFile.addActionListener(outShowFD);
+        panel.add(btnOutputFile);
+
+        panel.add(new JLabel("Run Cleaner:"));
+
+        startAction = new StartAction(this);
+        btnStart.addActionListener(startAction);
+        panel.add(btnStart);
 
         frame.getContentPane().add(panel);
+
+        frame.setMinimumSize(new Dimension(1200, 600));
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.pack();
+
+        frame.setLocation(200, 200);
     }
 
-    private static final class ShowFileDialog implements ActionListener {
 
-        private final JFrame frame;
-        private TextArea textArea;
-        private File file;
-
-        ShowFileDialog(final JFrame aFrame, TextArea text) {
-            frame = aFrame;
-            textArea = text;
-        }
-
-        public File getFile() {
-            return file;
-        }
-
-        @Override
-        public void actionPerformed(final ActionEvent aEvent) {
-            final JFileChooser fc = new JFileChooser();
-
-            int rc = fc.showOpenDialog(frame);
-            if (JFileChooser.APPROVE_OPTION == rc) {
-                file = fc.getSelectedFile();
-
-                String str = textArea.getText() + "\nSelected File:\n";
-                try {
-                    str += file.getCanonicalPath();
-                } catch (IOException e) {
-                    str = "Exception: detected";
-                }
-
-                textArea.setText(str);
-
-
-            }
-
-        }
-
-    }
 }
 
